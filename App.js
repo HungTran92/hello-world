@@ -33,7 +33,7 @@ SQLite.DEBUG(true);
 SQLite.enablePromise(true);
 
 var RNIntent = NativeModules.RNIntent;
-var RNHotUpdate = NativeModules.RNHotUpdate;
+
 
 // action
 var UserActions_MiddleWare=require('../actions/UserActions_MiddleWare');
@@ -56,7 +56,7 @@ var ReduxActions = require('../actions/Actions');
 var {Popup,popupActions} = require('../components/popups/Popup');
 var {socketConnection} = require('../components/modules/ConnectionsManager');
 
-var NavigatorNavigationBarStyles = require('./NavigatorNavigationBarStyles');
+var NavigatorNavigationBarStyles = require('./NavigatorNavigationBarStyles.ios.js');
 
 var SCTVSideMenu = require('../components/elements/SCTVSideMenu');
 
@@ -72,7 +72,7 @@ var NewsScreen = require('../components/screens/NewsScreen');
 var NewsDetailScreen = require('../components/screens/NewsDetailScreen');
 var AcountInfoScreen = require('../components/screens/AcountInfoScreen');
 var PasswordChangeScreen = require('../components/screens/PasswordChangeScreen');
-// var ChannelScreen = require('../components/screens/ChannelScreen');
+var ChannelScreen = require('../components/screens/ChannelScreen');
 var RuleScreen = require('../components/screens/RuleScreen');
 var ConsultativeNewsScreen = require('../components/screens/ConsultativeNewsScreen');
 var ConsultativeNewsDetailScreen = require('../components/screens/ConsultativeNewsDetailScreen');
@@ -93,7 +93,8 @@ var AlarmSettingPopup = require('../components/popups/AlarmSettingPopup');
 var VideoPopup = require('../components/popups/VideoPopup');
 var BeatPopup = require('../components/popups/BeatPopup');
 //variable
-var navBarHeight = NavigatorNavigationBarStyles.General.NavBarHeight;
+var navBarHeight = NavigatorNavigationBarStyles.General.TotalNavHeight;
+var statusBarHeight = NavigatorNavigationBarStyles.General.StatusBarHeight;
 var widthScreen = Dimensions.get('window').width;
 var heightScreen = Define.constants.availableHeightScreen;
 
@@ -224,57 +225,6 @@ var App = React.createClass({
     var self = this;
     var {dispatch,user}= self.props;
 
-    Debug.log('preProcessWhenStart');
-
-    // if (!__DEV__) {
-
-      RNHotUpdate.checkUpdate(Define.constants.serverAddr + '/update/latest')
-      .then((arg)=>{
-        Debug.log('checkUpdate:done');
-        Debug.log(arg);
-        if ((arg.currentHybridVersion < arg.newHybridVersion ) && !arg.mandatory ) {
-          // ask user
-          popupActions.setRenderContentAndShow(()=>{
-            return(
-              <DefaultPopup
-                  disableClose={false}
-                  title={'UPDATE'}
-                  description={'Có phiên bản mới ' +arg.newHybridVersion + '(hiện tại:' + arg.currentHybridVersion + ' )'
-                                    + arg.description
-                                    + ', bạn có muốn cập nhật'}
-                  buttonTitle={'Đồng ý'}
-                  onPress={()=>{
-                    popupActions.popPopup();
-                    RNHotUpdate.update()
-                    .then(()=>{
-                      popupActions.setRenderContentAndShow(()=>{
-                        return(
-                          <DefaultPopup
-                              title={'CẬP NHẬT THÀNH CÔNG'}
-                              description={'Cập nhật sẽ được áp dụng trong lần khởi động sau'}
-                              onPressPopup={()=>{popupActions.popPopup()}}/>
-                        )
-                      })
-                    })
-                    .catch((err)=>{
-                      popupActions.setRenderContentAndShow(()=>{
-                        return(
-                          <DefaultPopup
-                              title={'CẬP NHẬT THẤT BẠI'}
-                              description={err}
-                              onPressPopup={()=>{popupActions.popPopup()}}/>
-                        )
-                      })
-                    })
-                  }}/>
-            )
-          })
-          // RNHotUpdate.update();
-        }
-      })
-      .catch((err)=>{Debug.log(err);})
-    // }
-
     if (!user.signin.signinState) {
       // not login yet
       dispatch(UserActions_MiddleWare.useTokenFromStore())
@@ -284,7 +234,7 @@ var App = React.createClass({
         .catch(()=>{self.processDeepLinkFromNotify();/*self.processNotify();*/})
       })
       .catch(()=>{
-        self.processDeepLinkFromNotify();
+        // self.processNotify();
       }) ;
 
     }
@@ -304,16 +254,16 @@ var App = React.createClass({
     // var defaultHandler = ErrorUtils._globalHandler;
     // ErrorUtils._globalHandler = function(...args){
     //   defaultHandler(...args);
-    //   Debug.log('!!!!!!!!!!!!!!GLOBAL ERROR HANDLER!!!!!!!!!!!!!!!!!!!!!!');
-    //   Debug.log(args);
-    //   Debug.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+    //   console.log('!!!!!!!!!!!!!!GLOBAL ERROR HANDLER!!!!!!!!!!!!!!!!!!!!!!');
+    //   console.log(args);
+    //   console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
     //   NativeModules.BridgeReloader.reload();
     // };
     if (!Define.constants.debug) {
       ErrorUtils.setGlobalHandler(error => {
-        Debug.log('!!!!!!!!!!!!!!GLOBAL ERROR HANDLER!!!!!!!!!!!!!!!!!!!!!!');
-        Debug.log(error);
-        Debug.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+        console.log('!!!!!!!!!!!!!!GLOBAL ERROR HANDLER!!!!!!!!!!!!!!!!!!!!!!');
+        console.log(error);
+        console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
         NativeModules.BridgeReloader.reload()
       });
     }
@@ -334,7 +284,7 @@ var App = React.createClass({
       NewsDetailScreen,
       AcountInfoScreen,
       PasswordChangeScreen,
-      // ChannelScreen,
+      ChannelScreen,
       RuleScreen,
       ConsultativeNewsScreen,
       ScheduleScreen,
@@ -413,10 +363,6 @@ var App = React.createClass({
          if (popupActions.popPopup()) {
            return true;
          }
-         else if(popupActions.getPopupStackSize(0)>0){
-           popupActions.popPopup(0,true,0);
-           return true;
-         }
          else if (self.sideMenu && self.sideMenu.isOpen) {
            self.drawSideMenu(false);
            return true;
@@ -425,19 +371,20 @@ var App = React.createClass({
             if(Actions.pop()) {
                return true;
              }
-            //  else{
-            //    if (popupActions.getPopupStackSize()>0) {
-            //      if (popupActions.popPopup(1)) {
-            //        return true;
-            //      }
-            //      else{
-            //        return false;
-            //      }
-            //    }
-            //    else{
-            //     return false;
-            //    }
-            //  }
+             else{
+               if (popupActions.getPopupStackSize()>0) {
+                 if (popupActions.popPopup(1)) {
+                   return true;
+                 }
+                 else{
+                   return false;
+                 }
+               }
+               else{
+                return false;
+               }
+
+             }
           }
           return false;
         });
@@ -464,7 +411,6 @@ var App = React.createClass({
        if (!socketConnection.getConnectState()) {
          dispatch(ServerConnectionActions_MiddleWare.connectToServer())
          .then(()=>{
-           var {user } = this.props;
            if (user.signin.signinState) {
              dispatch(UserActions_MiddleWare.reSignin());
            }
@@ -511,13 +457,13 @@ var App = React.createClass({
 
     if (state.connected == false && state.connecting==false && self.firstStartup==false) {
       // display popup when connect false
-      popupActions.popAllPopup(2,true,2);
+      popupActions.popAllPopup(1);
       popupActions.setRenderContentAndShow(
         ()=>{
         return(
           <CannotConnectToServerPopup/>
         )
-      },self.splashScreen?  {backgroundColor:'rgba(0,0,0,0)'}:null,{tapToExit:false,priority:2});
+      },self.splashScreen?  {backgroundColor:'rgba(0,0,0,0)'}:null,{tapToExit:false,hardPop:true});
       self.firstTime = false;
     }
 
@@ -547,14 +493,9 @@ var App = React.createClass({
             ref={(sideMenu)=>{this.sideMenu=sideMenu;}}
             onChange={(state)=>{
               self.sideMenuState=state;
-              if (state) {
-                popupActions.popAllPopup(0,true,0);
-                popupActions.popAllPopup(0,true,1);
-                if (user.signin.signinState) {
-                  dispatch(UserActions_MiddleWare.getInfo());
-                }
+              if (user.signin.signinState) {
+                dispatch(UserActions_MiddleWare.getInfo());
               }
-
             }}
             openMenuOffset={widthScreen*4/5}
             isOpen={self.sideMenuState}
@@ -587,7 +528,7 @@ var App = React.createClass({
     //  const { dispatch,state  } = self.props;
     //  reduxManager.setDispatchAndState(dispatch,state);
      self.firstStartup = false;
-     StatusBarAndroid.setHexColor('#303030');
+    // StatusBarAndroid.setHexColor('#303030');
 
      // util connected
      if (socketConnection.getConnectState()) {
